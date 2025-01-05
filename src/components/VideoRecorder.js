@@ -11,46 +11,67 @@ const VideoRecorder = () => {
   const chunksRef = useRef([]);
 
   useEffect(() => {
-    // Получаем список медиа-устройств
     const getDevices = async () => {
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      const videoDevices = devices.filter(
-        (device) => device.kind === 'videoinput'
-      );
-      setDevices(videoDevices);
-      if (videoDevices.length > 0) setSelectedDevice(videoDevices[0].deviceId);
+      try {
+        // Запрашиваем разрешение на использование камеры
+        await navigator.mediaDevices.getUserMedia({ video: true });
+
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter(
+          (device) => device.kind === 'videoinput'
+        );
+        setDevices(videoDevices);
+        if (videoDevices.length > 0)
+          setSelectedDevice(videoDevices[0].deviceId);
+      } catch (error) {
+        console.error('Ошибка доступа к устройствам:', error);
+      }
     };
+
     getDevices();
   }, []);
 
   const startRecording = async () => {
-    if (!selectedDevice) return;
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: { deviceId: { exact: selectedDevice } },
-    });
+    if (!selectedDevice) {
+      console.error('Камера не выбрана');
+      return;
+    }
 
-    videoRef.current.srcObject = stream;
-    videoRef.current.play();
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { deviceId: { exact: selectedDevice } },
+      });
 
-    mediaRecorderRef.current = new MediaRecorder(stream);
-    mediaRecorderRef.current.ondataavailable = (event) => {
-      chunksRef.current.push(event.data);
-    };
+      videoRef.current.srcObject = stream;
+      videoRef.current.onloadedmetadata = () => {
+        videoRef.current.play();
+      };
 
-    mediaRecorderRef.current.onstop = () => {
-      const blob = new Blob(chunksRef.current, { type: 'video/webm' });
-      setVideoBlob(blob);
-      chunksRef.current = [];
-    };
+      mediaRecorderRef.current = new MediaRecorder(stream);
+      mediaRecorderRef.current.ondataavailable = (event) => {
+        chunksRef.current.push(event.data);
+      };
 
-    mediaRecorderRef.current.start();
-    setIsRecording(true);
+      mediaRecorderRef.current.onstop = () => {
+        const blob = new Blob(chunksRef.current, { type: 'video/webm' });
+        setVideoBlob(blob);
+        chunksRef.current = [];
+      };
+
+      mediaRecorderRef.current.start();
+      setIsRecording(true);
+    } catch (error) {
+      console.error('Ошибка при запуске записи:', error);
+    }
   };
 
   const stopRecording = () => {
-    mediaRecorderRef.current.stop();
-    videoRef.current.srcObject.getTracks().forEach((track) => track.stop());
-    setIsRecording(false);
+    if (mediaRecorderRef.current) {
+      mediaRecorderRef.current.stop();
+      const tracks = videoRef.current.srcObject.getTracks();
+      tracks.forEach((track) => track.stop());
+      setIsRecording(false);
+    }
   };
 
   const handleDeviceChange = (event) => {
@@ -82,7 +103,7 @@ const VideoRecorder = () => {
         ref={videoRef}
         autoPlay
         muted
-        style={{ width: '100%', maxHeight: '400px' }}
+        style={{ width: '100%', maxHeight: '400px', backgroundColor: 'black' }}
       />
 
       <div>
