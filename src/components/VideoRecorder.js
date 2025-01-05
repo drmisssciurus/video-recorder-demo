@@ -1,115 +1,109 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
-const VideoRecorder = ({ onVideoRecorded }) => {
+const VideoRecorder = () => {
+  const [devices, setDevices] = useState([]);
+  const [selectedDevice, setSelectedDevice] = useState(null);
   const [isRecording, setIsRecording] = useState(false);
-  const [cameras, setCameras] = useState([]);
-  const [selectedCamera, setSelectedCamera] = useState(null);
+  const [videoBlob, setVideoBlob] = useState(null);
 
   const videoRef = useRef(null);
   const mediaRecorderRef = useRef(null);
-  const streamRef = useRef(null);
-  const recordedChunks = useRef([]);
-
-  // Получение списка камер
-  const getCameras = async () => {
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    const videoDevices = devices.filter(
-      (device) => device.kind === 'videoinput'
-    );
-    setCameras(videoDevices);
-    if (videoDevices.length > 0) setSelectedCamera(videoDevices[0].deviceId);
-  };
-
-  // Запуск камеры
-  const startCamera = async (deviceId) => {
-    try {
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => track.stop());
-      }
-
-      const constraints = {
-        video: { deviceId: deviceId ? { exact: deviceId } : undefined },
-        audio: true,
-      };
-
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      console.log('Stream obtained:', stream);
-      streamRef.current = stream;
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
-    } catch (error) {
-      console.error('Error accessing media devices:', error);
-    }
-  };
+  const chunksRef = useRef([]);
 
   useEffect(() => {
-    getCameras();
+    // Получаем список медиа-устройств
+    const getDevices = async () => {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter(
+        (device) => device.kind === 'videoinput'
+      );
+      setDevices(videoDevices);
+      if (videoDevices.length > 0) setSelectedDevice(videoDevices[0].deviceId);
+    };
+    getDevices();
   }, []);
 
-  useEffect(() => {
-    if (selectedCamera) startCamera(selectedCamera);
-  }, [selectedCamera]);
+  const startRecording = async () => {
+    if (!selectedDevice) return;
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { deviceId: { exact: selectedDevice } },
+    });
 
-  // Начало записи
-  const startRecording = () => {
-    if (streamRef.current) {
-      const mediaRecorder = new MediaRecorder(streamRef.current);
-      mediaRecorderRef.current = mediaRecorder;
+    videoRef.current.srcObject = stream;
+    videoRef.current.play();
 
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          recordedChunks.current.push(event.data);
-        }
-      };
+    mediaRecorderRef.current = new MediaRecorder(stream);
+    mediaRecorderRef.current.ondataavailable = (event) => {
+      chunksRef.current.push(event.data);
+    };
 
-      mediaRecorder.onstop = () => {
-        const blob = new Blob(recordedChunks.current, { type: 'video/webm' });
-        onVideoRecorded(blob);
-      };
+    mediaRecorderRef.current.onstop = () => {
+      const blob = new Blob(chunksRef.current, { type: 'video/webm' });
+      setVideoBlob(blob);
+      chunksRef.current = [];
+    };
 
-      mediaRecorder.start();
-      setIsRecording(true);
-    } else {
-      console.error('No media stream available for recording.');
-    }
+    mediaRecorderRef.current.start();
+    setIsRecording(true);
   };
 
-  // Остановка записи
   const stopRecording = () => {
-    if (mediaRecorderRef.current) {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
-    } else {
-      console.error('No MediaRecorder to stop.');
-    }
+    mediaRecorderRef.current.stop();
+    videoRef.current.srcObject.getTracks().forEach((track) => track.stop());
+    setIsRecording(false);
+  };
+
+  const handleDeviceChange = (event) => {
+    setSelectedDevice(event.target.value);
   };
 
   return (
     <div>
-      <video ref={videoRef} autoPlay muted style={{ width: '100%' }}></video>
+      <h1>Video Recorder</h1>
+
+      {devices.length > 0 && (
+        <div>
+          <label htmlFor="device">Выбор камеры:</label>
+          <select
+            id="device"
+            onChange={handleDeviceChange}
+            value={selectedDevice}
+          >
+            {devices.map((device) => (
+              <option key={device.deviceId} value={device.deviceId}>
+                {device.label || `Камера ${device.deviceId}`}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      <video
+        ref={videoRef}
+        autoPlay
+        muted
+        style={{ width: '100%', maxHeight: '400px' }}
+      />
+
       <div>
-        <label>Camera:</label>
-        <select
-          value={selectedCamera || ''}
-          onChange={(e) => setSelectedCamera(e.target.value)}
-        >
-          {cameras.map((camera) => (
-            <option key={camera.deviceId} value={camera.deviceId}>
-              {camera.label || 'Camera'}
-            </option>
-          ))}
-        </select>
+        {!isRecording ? (
+          <button onClick={startRecording}>Старт</button>
+        ) : (
+          <button onClick={stopRecording}>Стоп</button>
+        )}
       </div>
-      <div>
-        <button onClick={startRecording} disabled={isRecording}>
-          Start Recording
-        </button>
-        <button onClick={stopRecording} disabled={!isRecording}>
-          Stop Recording
-        </button>
-      </div>
+
+      {videoBlob && (
+        <div>
+          <h2>Записанное видео:</h2>
+          <video controls style={{ width: '100%', maxHeight: '400px' }}>
+            <source src={URL.createObjectURL(videoBlob)} type="video/webm" />
+          </video>
+          <a href={URL.createObjectURL(videoBlob)} download="video.webm">
+            Скачать видео
+          </a>
+        </div>
+      )}
     </div>
   );
 };
