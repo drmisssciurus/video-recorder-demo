@@ -14,18 +14,18 @@ const VideoRecorder = () => {
     // Получаем список медиа-устройств
     const getDevices = async () => {
       try {
-        console.log('Запрашиваем доступ к камере...');
-        await navigator.mediaDevices.getUserMedia({ video: true }); // Разрешение на доступ к камере
+        console.log('Requesting access to the camera...');
+        await navigator.mediaDevices.getUserMedia({ video: true }); // Permission to access the camera
         const devices = await navigator.mediaDevices.enumerateDevices();
         const videoDevices = devices.filter(
           (device) => device.kind === 'videoinput'
         );
-        console.log('Доступные устройства:', videoDevices);
+        console.log('Available devices:', videoDevices);
         setDevices(videoDevices);
         if (videoDevices.length > 0)
           setSelectedDevice(videoDevices[0].deviceId);
       } catch (error) {
-        console.error('Ошибка доступа к устройствам:', error);
+        console.error('Error accessing devices:', error);
       }
     };
     getDevices();
@@ -33,16 +33,16 @@ const VideoRecorder = () => {
 
   const startRecording = async () => {
     if (!selectedDevice) {
-      console.error('Камера не выбрана');
+      console.error('Camera not selected');
       return;
     }
     try {
-      console.log('Запрашиваем доступ к выбранной камере:', selectedDevice);
+      console.log('Request access to the selected camera:', selectedDevice);
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { deviceId: { exact: selectedDevice } },
       });
 
-      console.log('Поток видео получен:', stream);
+      console.log('Video stream received:', stream);
       videoRef.current.srcObject = stream;
       videoRef.current.play();
 
@@ -57,31 +57,31 @@ const VideoRecorder = () => {
       chunksRef.current = [];
 
       mediaRecorderRef.current.ondataavailable = (event) => {
-        console.log('Новый кусок данных доступен:', event.data);
+        console.log('New piece of data available:', event.data);
         chunksRef.current.push(event.data);
       };
 
       mediaRecorderRef.current.onstop = () => {
         console.log(
-          'Запись остановлена. Количество кусков:',
+          'Recording stopped. Number of pieces:',
           chunksRef.current.length
         );
         const blob = new Blob(chunksRef.current, { type: options.mimeType });
-        console.log('Созданный Blob:', blob);
+        console.log('Created Blob:', blob);
         setVideoBlob(blob);
         chunksRef.current = [];
       };
 
       mediaRecorderRef.current.start();
-      console.log('Запись начата');
+      console.log('Recording start');
       setIsRecording(true);
     } catch (error) {
-      console.error('Ошибка при запуске записи:', error);
+      console.error('Error starting recording:', error);
     }
   };
 
   const stopRecording = () => {
-    console.log('Останавливаем запись');
+    console.log('Recording stop');
     if (mediaRecorderRef.current) {
       mediaRecorderRef.current.stop();
     }
@@ -92,17 +92,17 @@ const VideoRecorder = () => {
   };
 
   const handleDeviceChange = (event) => {
-    console.log('Выбрано устройство:', event.target.value);
+    console.log('Device selected:', event.target.value);
     setSelectedDevice(event.target.value);
   };
 
   return (
     <div>
-      <h1>Video Recorder</h1>
+      <h1>VideoDemo Recorder</h1>
 
       {devices.length > 0 && (
         <div>
-          <label htmlFor="device">Выбор камеры:</label>
+          <label htmlFor="device">Select camera:</label>
           <select
             id="device"
             onChange={handleDeviceChange}
@@ -127,20 +127,16 @@ const VideoRecorder = () => {
 
       <div>
         {!isRecording ? (
-          <button onClick={startRecording}>Старт</button>
+          <button onClick={startRecording}>Start recording</button>
         ) : (
-          <button onClick={stopRecording}>Стоп</button>
+          <button onClick={stopRecording}>Stop recording</button>
         )}
       </div>
 
       {videoBlob && (
         <div>
-          <h2>Записанное видео:</h2>
-          <video controls style={{ width: '100%', maxHeight: '400px' }}>
-            <source src={URL.createObjectURL(videoBlob)} type="video/webm" />
-          </video>
           <a href={URL.createObjectURL(videoBlob)} download="video.webm">
-            Скачать видео
+            Download video
           </a>
         </div>
       )}
