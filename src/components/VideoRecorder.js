@@ -6,6 +6,12 @@ const VideoRecorder = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [videoBlob, setVideoBlob] = useState(null);
 
+  if (videoBlob) {
+    console.log('Blob создан:', videoBlob.size, 'байт');
+  } else {
+    console.error('Blob пустой или не создан');
+  }
+
   const videoRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
