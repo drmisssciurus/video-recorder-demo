@@ -14,11 +14,13 @@ const VideoRecorder = () => {
     // Получаем список медиа-устройств
     const getDevices = async () => {
       try {
+        console.log('Запрашиваем доступ к камере...');
         await navigator.mediaDevices.getUserMedia({ video: true }); // Разрешение на доступ к камере
         const devices = await navigator.mediaDevices.enumerateDevices();
         const videoDevices = devices.filter(
           (device) => device.kind === 'videoinput'
         );
+        console.log('Доступные устройства:', videoDevices);
         setDevices(videoDevices);
         if (videoDevices.length > 0)
           setSelectedDevice(videoDevices[0].deviceId);
@@ -30,12 +32,17 @@ const VideoRecorder = () => {
   }, []);
 
   const startRecording = async () => {
-    if (!selectedDevice) return;
+    if (!selectedDevice) {
+      console.error('Камера не выбрана');
+      return;
+    }
     try {
+      console.log('Запрашиваем доступ к выбранной камере:', selectedDevice);
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { deviceId: { exact: selectedDevice } },
       });
 
+      console.log('Поток видео получен:', stream);
       videoRef.current.srcObject = stream;
       videoRef.current.play();
 
@@ -43,21 +50,30 @@ const VideoRecorder = () => {
       if (!MediaRecorder.isTypeSupported(options.mimeType)) {
         options.mimeType = 'video/mp4';
       }
+      console.log('Используемый MIME-тип:', options.mimeType);
+
       mediaRecorderRef.current = new MediaRecorder(stream, options);
 
       chunksRef.current = [];
 
       mediaRecorderRef.current.ondataavailable = (event) => {
+        console.log('Новый кусок данных доступен:', event.data);
         chunksRef.current.push(event.data);
       };
 
       mediaRecorderRef.current.onstop = () => {
+        console.log(
+          'Запись остановлена. Количество кусков:',
+          chunksRef.current.length
+        );
         const blob = new Blob(chunksRef.current, { type: options.mimeType });
+        console.log('Созданный Blob:', blob);
         setVideoBlob(blob);
         chunksRef.current = [];
       };
 
       mediaRecorderRef.current.start();
+      console.log('Запись начата');
       setIsRecording(true);
     } catch (error) {
       console.error('Ошибка при запуске записи:', error);
@@ -65,6 +81,7 @@ const VideoRecorder = () => {
   };
 
   const stopRecording = () => {
+    console.log('Останавливаем запись');
     if (mediaRecorderRef.current) {
       mediaRecorderRef.current.stop();
     }
@@ -75,6 +92,7 @@ const VideoRecorder = () => {
   };
 
   const handleDeviceChange = (event) => {
+    console.log('Выбрано устройство:', event.target.value);
     setSelectedDevice(event.target.value);
   };
 
