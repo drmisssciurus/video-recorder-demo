@@ -1,13 +1,13 @@
 {
   "files": {
     "main.css": "/video-recorder-demo/static/css/main.4ab6687a.css",
-    "main.js": "/video-recorder-demo/static/js/main.9c45db3c.js",
+    "main.js": "/video-recorder-demo/static/js/main.a6b69df8.js",
     "index.html": "/video-recorder-demo/index.html",
     "main.4ab6687a.css.map": "/video-recorder-demo/static/css/main.4ab6687a.css.map",
-    "main.9c45db3c.js.map": "/video-recorder-demo/static/js/main.9c45db3c.js.map"
+    "main.a6b69df8.js.map": "/video-recorder-demo/static/js/main.a6b69df8.js.map"
   },
   "entrypoints": [
     "static/css/main.4ab6687a.css",
-    "static/js/main.9c45db3c.js"
+    "static/js/main.a6b69df8.js"
   ]
 }
