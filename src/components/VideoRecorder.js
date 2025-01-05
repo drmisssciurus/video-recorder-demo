@@ -43,11 +43,17 @@ const VideoRecorder = () => {
       chunksRef.current = [];
 
       mediaRecorderRef.current.ondataavailable = (event) => {
+        console.log('Данные доступны:', event.data.size, 'байт');
         chunksRef.current.push(event.data);
       };
 
       mediaRecorderRef.current.onstop = () => {
+        console.log(
+          'Остановлена запись. Количество данных:',
+          chunksRef.current.length
+        );
         const blob = new Blob(chunksRef.current, { type: 'video/webm' });
+        console.log('Созданный Blob:', blob.size, 'байт');
         setVideoBlob(blob);
         chunksRef.current = [];
       };
