@@ -6,12 +6,6 @@ const VideoRecorder = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [videoBlob, setVideoBlob] = useState(null);
 
-  if (videoBlob) {
-    console.log('Blob создан:', videoBlob.size, 'байт');
-  } else {
-    console.error('Blob пустой или не создан');
-  }
-
   const videoRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
@@ -45,21 +39,20 @@ const VideoRecorder = () => {
       videoRef.current.srcObject = stream;
       videoRef.current.play();
 
-      mediaRecorderRef.current = new MediaRecorder(stream);
+      const options = { mimeType: 'video/webm;codecs=vp9' };
+      if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+        options.mimeType = 'video/mp4';
+      }
+      mediaRecorderRef.current = new MediaRecorder(stream, options);
+
       chunksRef.current = [];
 
       mediaRecorderRef.current.ondataavailable = (event) => {
-        console.log('Данные доступны:', event.data.size, 'байт');
         chunksRef.current.push(event.data);
       };
 
       mediaRecorderRef.current.onstop = () => {
-        console.log(
-          'Остановлена запись. Количество данных:',
-          chunksRef.current.length
-        );
-        const blob = new Blob(chunksRef.current, { type: 'video/webm' });
-        console.log('Созданный Blob:', blob.size, 'байт');
+        const blob = new Blob(chunksRef.current, { type: options.mimeType });
         setVideoBlob(blob);
         chunksRef.current = [];
       };
